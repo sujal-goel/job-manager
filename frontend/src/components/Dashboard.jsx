@@ -46,6 +46,11 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     if (!user) return;
+    if (!API) {
+      console.error('Missing VITE_BACKEND_URL in frontend environment');
+      setLoading(false);
+      return;
+    }
     try {
       const h = await headers();
       const params = {};
@@ -56,7 +61,7 @@ export default function Dashboard() {
         axios.get(API,               { headers: h, params }),
         axios.get(`${API}/analytics`, { headers: h }),
       ]);
-      setJobs(jobsRes.data);
+      setJobs(Array.isArray(jobsRes.data) ? jobsRes.data : []);
       setAnalytics(analyticsRes.data);
     } catch (e) {
       console.error(e);
@@ -67,13 +72,14 @@ export default function Dashboard() {
 
   const fetchAdmin = useCallback(async () => {
     if (!isAdmin) return;
+    if (!API) return;
     try {
       const h = await headers();
       const [jobsRes, statsRes] = await Promise.all([
         axios.get(`${API}/admin/all`,   { headers: h }),
         axios.get(`${API}/admin/stats`, { headers: h }),
       ]);
-      setAdminData({ jobs: jobsRes.data, stats: statsRes.data });
+      setAdminData({ jobs: Array.isArray(jobsRes.data) ? jobsRes.data : [], stats: statsRes.data });
     } catch (e) {
       console.error('Admin fetch error:', e);
     }
@@ -144,7 +150,9 @@ export default function Dashboard() {
     </div>
   );
 
-  const reminders = analytics?.overdueFollowUps || [];
+  const reminders = Array.isArray(analytics?.overdueFollowUps) ? analytics.overdueFollowUps : [];
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
+  const safeAdminJobs = Array.isArray(adminData.jobs) ? adminData.jobs : [];
 
   return (
     <div style={{ minHeight: '100vh', background: '#080c14', color: 'white', fontFamily: "'Inter', sans-serif" }}>
@@ -300,14 +308,14 @@ export default function Dashboard() {
             </div>
 
             {/* Job Cards */}
-            {jobs.length === 0 ? (
+            {safeJobs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '5rem 2rem', color: '#334155' }}>
                 <div style={{ fontSize: '3rem' }}>📭</div>
                 <p style={{ marginTop: '1rem' }}>No applications yet. Add your first one!</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {jobs.map(job => {
+                {safeJobs.map(job => {
                   const sc = statusColors[job.status] || statusColors.Applied;
                   return (
                     <div key={job._id} style={{ background: '#0d1117', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', transition: 'border-color 0.2s' }}
@@ -404,7 +412,7 @@ export default function Dashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
             {['Applied', 'Interview', 'Selected', 'Rejected'].map(status => {
               const sc = statusColors[status];
-              const columnJobs = jobs.filter(j => j.status === status);
+              const columnJobs = safeJobs.filter(j => j.status === status);
               return (
                 <div key={status} style={{ background: '#0d1117', borderRadius: '16px', border: '1px solid #1e293b', padding: '1.25rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: `2px solid ${sc.dot}`, paddingBottom: '0.5rem' }}>
@@ -460,7 +468,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {adminData.jobs.map(j => (
+                  {safeAdminJobs.map(j => (
                     <tr key={j._id} style={{ borderBottom: '1px solid #1e293b' }}>
                       <td style={{ padding: '1rem', color: '#6366f1' }}>{j.userEmail || 'Unknown'}</td>
                       <td style={{ padding: '1rem' }}>{j.company}</td>
