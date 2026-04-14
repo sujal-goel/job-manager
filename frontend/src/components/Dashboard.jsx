@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useUser, useAuth, UserButton, useClerk } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 
-const API = import.meta.VITE_BACKEND_URL;
+const API = import.meta.env.VITE_BACKEND_URL;
 
 const statusColors = {
   Applied:   { bg: '#1e3a5f', text: '#60a5fa', dot: '#3b82f6' },
